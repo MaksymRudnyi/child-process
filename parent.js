@@ -13,12 +13,12 @@ app.post('/crawl', function(req, res){
     form.parse(req, function(err, fields, files) {
 
         res.writeHead(200, {'content-type': 'text/plain'});
-        res.end('start crawl: ' + fields.url);
+        res.end('start crawl: ' + JSON.stringify(fields));
 
         var maxBufferBytes = 1024 * 1024 * 1024;
         var tiimeOutMiliseconds = 1000 * 60 * 10;
 
-        exec('node crawler.js ' + fields.url, [], {maxBuffer: maxBufferBytes, timeout: tiimeOutMiliseconds}, function(error, stdout, stderr) {
+        exec('node crawler.js ' + fields.url + ' ' + fields.elasticIp, [], {maxBuffer: maxBufferBytes, timeout: tiimeOutMiliseconds}, function(error, stdout, stderr) {
             if (error) {
                 console.error('exec error: ', error);
                 return;
@@ -26,6 +26,7 @@ app.post('/crawl', function(req, res){
             console.log('stdout: ', stdout);
             console.log('stderr: ', stderr);
         });
+
     });
 
 });

@@ -5,38 +5,42 @@ var elasticsearch = require('elasticsearch');
 var Buffer = require('buffer').Buffer;
 var Iconv = require('iconv').Iconv;
 
-var client = new elasticsearch.Client({
-    host: 'http://130.211.191.170:9200/'
-});
-
 var siteURL = process.argv[2];
+var elasticIp = process.argv[3];
 
-try{
-    var crawler = new Crawler().configure({maxRequestsPerSecond: 20, depth: 20});
-    crawler.crawl({
-        url: siteURL, success: function (page) {
-            if (page.response.headers['content-type'].indexOf('windows-1251') > 1){
-                saveWindows1251(page);
-            } else {
-                saveUTF8(page);
+var client = new elasticsearch.Client({
+    host: 'http://'+elasticIp+':9200/'
+});
+//host: 'http://130.211.191.170:9200/'
+
+if (!siteURL || !elasticIp) {
+    return;
+} else {
+    try{
+        var crawler = new Crawler().configure({maxRequestsPerSecond: 20, depth: 20});
+        crawler.crawl({
+            url: siteURL, success: function (page) {
+                if (page.response.headers['content-type'].indexOf('windows-1251') > 1){
+                    saveWindows1251(page);
+                } else {
+                    saveUTF8(page);
+                }
+            }, failure: function (page) {
+                console.log('err', page.status);
             }
-        }, failure: function (page) {
-            console.log('err', page.status);
-        }
-    });
-} catch (e) {}
+        });
+    } catch (e) {}
+}
+
 
 var req1 = /([а-яА-Я ,-\:]{15,}\?)/g;
 var req2 = /(Как |Почему |Что |Когда |Кто |Какой |Чей |Каков |Который |Сколько |Где |Куда |Откуда |Зачем)[а-яА-Я ,-\:]{15,}\?*/g;
 var saveUTF8 = function(page){
     var encodedBody = page.body.toString('utf8').match(req1);
     putInElastic(encodedBody, page.url);
-    console.log(encodedBody);
 
     encodedBody = page.body.toString('utf8').match(req2);
     putInElastic(encodedBody, page.url);
-    console.log(encodedBody);
-    //console.log(encodedBody);
 };
 
 var saveWindows1251 = function(page){
@@ -51,7 +55,6 @@ var saveWindows1251 = function(page){
 };
 
 var putInElastic = function(list, url){
-    //console.log(url);
     var putArray = [];
     _.each(list, function(item, index){
         item = item.trim();
